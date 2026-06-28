@@ -235,6 +235,34 @@ GIAS.standards.forEach(s=>{
 });
 const BYID={}; LIBRARY.forEach(d=>BYID[d.id]=d);
 
+// ===== 親項目→下層ノードの対応（階層化された項目）=====
+// 各原則は配下の基準（下層）を持つため、基準の評価が完了するまで「適合」にはしない（下層の最悪達成度で集約）
+const CHILD_OF={}; for(let p=1;p<=15;p++) CHILD_OF["原則"+p]="ia-p"+p;
+function childRollup(childId){
+  const cd=BYID[childId]; if(!cd) return null;
+  let cx; try{cx=compileDef(cd);}catch(e){return null;}
+  const res=runRows(cx,rowsFromData(cx,cd.data||[]));
+  let worst=cx.levels[0],wi=0; res.forEach(a=>{const k=cx.levels.indexOf(a.grade);if(k>wi){wi=k;worst=a.grade;}});
+  const pending=res.filter(a=>a.grade!==cx.levels[0]).length;
+  return {worst,wi,levels:cx.levels,total:res.length,pending,theme:cd.theme,id:childId};
+}
+// 階層化された親項目（原則）を、配下の基準の結果で集約（下層未完了なら親は適合にしない）
+function applyHierarchy(){
+  if(!CTX) return; const idCol=CTX.cols[0];
+  RESULTS.forEach(a=>{
+    const cid=CHILD_OF[a.row[idCol]]; if(!cid) return;
+    const ru=childRollup(cid); if(!ru) return;
+    a.childId=cid; a.childInfo=ru;
+    const ownIdx=CTX.levels.indexOf(a.grade);
+    const childIdx=CTX.levels.indexOf(ru.worst);   // levelsは全ノード共通
+    if(childIdx>ownIdx) a.grade=ru.worst;          // 親達成度＝下層の最悪達成度で集約
+    if(ru.pending>0){
+      a.flags=[...a.flags, `下層基準「${ru.id}」が未完了（${ru.total}件中 ${ru.pending}件が適合以外）`];
+      a.questions=[...a.questions, `本原則は配下の基準（${ru.id}）の評価が未完了です。基準 ${ru.total} 件中 ${ru.pending} 件が適合以外です。基準の是正・評価完了後に、本原則の適合をご報告ください。`];
+    }
+  });
+}
+
 // ===== エンジン =====
 let CTX=null, RESULTS=[], CONFIRMATIONS=[];
 function resolveRules(def){const t=(def.template&&TEMPLATES[def.template])?TEMPLATES[def.template]:[];return [...t,...(def.rules||[])];}
@@ -312,7 +340,7 @@ function parseInput(){
 }
 function runAudit(){ if(!CTX){ if(!applyDef()) return; } const rows=parseInput();
   const out=document.getElementById('out'); if(!rows.length){ out.innerHTML='<div class="card">データがありません。</div>'; return; }
-  RESULTS=runRows(CTX,rows); render(); }
+  RESULTS=runRows(CTX,rows); applyHierarchy(); render(); }
 function esc(s){return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
 
 function render(){
@@ -349,7 +377,7 @@ function render(){
   RESULTS.forEach(a=>{ const gi=levels.indexOf(a.grade);
     h+=`<tr style="background:${lightFor(gi,total)}"><td>${esc(a.row[idCol])}</td><td><span class="badge" style="background:${colorFor(gi,total)}">${esc(a.grade)}</span></td>`;
     dispCols.forEach(c=>h+=`<td>${esc(a.row[c])}</td>`);
-    h+=`<td>${a.flags.length?`<span class="flags">${a.flags.map(esc).join('、')}</span>`:'<span style="color:#2f9e5f">✔ 適合</span>'}</td></tr>`;
+    h+=`<td>${a.flags.length?`<span class="flags">${a.flags.map(esc).join('、')}</span>`:'<span style="color:#2f9e5f">✔ 適合</span>'}${a.childId?` <button class="mini" onclick="loadRuleset('${a.childId}')">▶ 下層を開く</button>`:''}</td></tr>`;
   });
   h+=`</tbody></table></div></div>`;
 
