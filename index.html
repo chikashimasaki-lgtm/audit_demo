@@ -29,6 +29,9 @@
   a.card .t{font-size:.95rem;color:var(--accentd);font-weight:700;display:flex;align-items:center;gap:8px}
   a.card .d{font-size:.78rem;color:var(--muted);margin-top:6px;line-height:1.5}
   a.card .f{font-size:.7rem;color:#9aa7b5;margin-top:8px;font-family:ui-monospace,monospace}
+  a.card.hero{border:2px solid var(--accent);background:linear-gradient(135deg,#f5f9fd,#eaf2fb)}
+  a.card.hero .t{font-size:1.05rem}
+  a.card.hero .d{color:var(--txt)}
   details{margin-top:12px}
   summary{cursor:pointer;font-weight:700;color:var(--accentd);font-size:.82rem;padding:4px}
   footer{color:var(--muted);font-size:.72rem;text-align:center;margin-top:20px}
@@ -46,50 +49,53 @@
     各ツールの判定は<b>端末内のルールベース計算</b>で行い、入力データが外部へ送信されることはありません。
   </div>
 
-  <div class="sec-title">取引・経費スクリーニング</div>
+  <div class="sec-title">メインツール</div>
   <div class="grid">
-    <a class="card" href="kousaihi.html">
-      <div class="t">💴 会議費・交際費 監査スクリーニング</div>
-      <div class="d">交際費の科目分散・過剰接待・相手方偽装・決裁逸脱を自動判定し、疑義案件のみ監査内容確認書を生成。</div>
-      <div class="f">kousaihi.html</div>
-    </a>
-    <a class="card" href="audit-screening.html">
+    <a class="card hero" href="audit-screening.html">
       <div class="t">🔍 監査スクリーニング 汎用版</div>
-      <div class="d">汎用的な監査スクリーニングエンジン。任意の精算・取引データに対する統合判定。</div>
+      <div class="d">汎用的な監査スクリーニングエンジン。任意の精算・取引データに対する統合判定を行うメインツール。</div>
       <div class="f">audit-screening.html</div>
     </a>
-    <a class="card" href="authority-violation-screening.html">
-      <div class="t">⚖️ 職務権限違反スクリーニング</div>
-      <div class="d">決裁権限・職務分掌に反する取引（権限違反・自己承認等）を検知する汎用スクリーニング。</div>
-      <div class="f">authority-violation-screening.html</div>
-    </a>
   </div>
 
-  <div class="sec-title">内部統制・内部評価</div>
-  <div class="grid">
-    <a class="card" href="internal-control-assessment.html">
-      <div class="t">🏛️ 内部統制 整備状況監査</div>
-      <div class="d">内部統制の整備状況に関する監査スクリーニング。</div>
-      <div class="f">internal-control-assessment.html</div>
-    </a>
-    <a class="card" href="internal-assessments.html">
-      <div class="t">📋 Internal Assessments（品質の内部評価）</div>
-      <div class="d">グローバル内部監査基準（GIAS）準拠の内部監査品質 内部評価（4段階評価）。</div>
-      <div class="f">internal-assessments.html</div>
-    </a>
-  </div>
-
-  <div class="sec-title">サイバーセキュリティ評価</div>
-  <div class="grid">
-    <a class="card" href="cybersecurity-assessment.html">
-      <div class="t">🔐 サイバーセキュリティ 整備状況監査</div>
-      <div class="d">サイバーセキュリティ管理態勢の整備状況に関する監査スクリーニング。</div>
-      <div class="f">cybersecurity-assessment.html</div>
-    </a>
-  </div>
   <details>
-    <summary>サイバーセキュリティ評価の派生バージョン（2.1.1 系）</summary>
-    <div class="grid" style="margin-top:8px">
+    <summary>📂 個別デモ（その他のスクリーニング・評価ツール）</summary>
+
+    <div class="sec-title">取引・経費スクリーニング</div>
+    <div class="grid">
+      <a class="card" href="kousaihi.html">
+        <div class="t">💴 会議費・交際費 監査スクリーニング</div>
+        <div class="d">交際費の科目分散・過剰接待・相手方偽装・決裁逸脱を自動判定し、疑義案件のみ監査内容確認書を生成。</div>
+        <div class="f">kousaihi.html</div>
+      </a>
+      <a class="card" href="authority-violation-screening.html">
+        <div class="t">⚖️ 職務権限違反スクリーニング</div>
+        <div class="d">決裁権限・職務分掌に反する取引（権限違反・自己承認等）を検知する汎用スクリーニング。</div>
+        <div class="f">authority-violation-screening.html</div>
+      </a>
+    </div>
+
+    <div class="sec-title">内部統制・内部評価</div>
+    <div class="grid">
+      <a class="card" href="internal-control-assessment.html">
+        <div class="t">🏛️ 内部統制 整備状況監査</div>
+        <div class="d">内部統制の整備状況に関する監査スクリーニング。</div>
+        <div class="f">internal-control-assessment.html</div>
+      </a>
+      <a class="card" href="internal-assessments.html">
+        <div class="t">📋 Internal Assessments（品質の内部評価）</div>
+        <div class="d">グローバル内部監査基準（GIAS）準拠の内部監査品質 内部評価（4段階評価）。</div>
+        <div class="f">internal-assessments.html</div>
+      </a>
+    </div>
+
+    <div class="sec-title">サイバーセキュリティ評価</div>
+    <div class="grid">
+      <a class="card" href="cybersecurity-assessment.html">
+        <div class="t">🔐 サイバーセキュリティ 整備状況監査</div>
+        <div class="d">サイバーセキュリティ管理態勢の整備状況に関する監査スクリーニング。</div>
+        <div class="f">cybersecurity-assessment.html</div>
+      </a>
       <a class="card" href="cybersecurity-2.1.1.html">
         <div class="t">🔐 サイバーセキュリティ 2.1.1</div>
         <div class="f">cybersecurity-2.1.1.html</div>
