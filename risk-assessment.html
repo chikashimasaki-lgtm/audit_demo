@@ -1,0 +1,306 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>リスク評価（年間監査計画）</title>
+<style>
+  :root{
+    --bg:#eef2f6;--panel:#fff;--line:#d7e0e8;--txt:#27313c;--muted:#67768a;
+    --accent:#cc0000;--accentd:#990000;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:"Meiryo UI","Hiragino Kaku Gothic ProN","Noto Sans JP",sans-serif;
+    background:var(--bg);color:var(--txt);line-height:1.55;padding:16px;font-size:14px}
+  .wrap{max-width:1100px;margin:0 auto}
+  header{background:linear-gradient(135deg,var(--accent),var(--accentd));color:#fff;
+    border-radius:12px;padding:16px 20px;border-bottom:3px solid #c8102e;box-shadow:0 2px 8px rgba(20,60,100,.2)}
+  header h1{font-size:1.2rem}
+  header p{font-size:.78rem;opacity:.9;margin-top:3px}
+  .notice{background:#fff7e6;border:1px solid #f0c36d;border-left:4px solid #e0a000;
+    border-radius:10px;padding:11px 14px;margin-top:12px;font-size:.82rem;color:#7a5b00;line-height:1.6}
+  .notice b{color:#a06a00}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:14px 16px;
+    margin-top:12px;box-shadow:0 1px 3px rgba(20,50,80,.05)}
+  .card h2{font-size:.95rem;color:#15436f;margin-bottom:8px;display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+  .cfg{display:flex;flex-wrap:wrap;gap:14px;align-items:center;font-size:.82rem}
+  .cfg label{display:flex;align-items:center;gap:6px}
+  .cfg input{padding:5px 7px;border:1px solid var(--line);border-radius:6px;font-size:.85rem}
+  textarea{width:100%;border:1px solid var(--line);border-radius:8px;padding:10px;
+    font-family:ui-monospace,Consolas,monospace;font-size:.76rem;resize:vertical;white-space:pre}
+  #input{height:150px}
+  .btns{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
+  button{cursor:pointer;border:1px solid var(--line);border-radius:8px;padding:8px 14px;font-size:.85rem;
+    background:#fff;color:var(--txt);font-weight:600}
+  button:hover{border-color:var(--accent);color:#1f5f9e}
+  button.primary{background:var(--accent);color:#fff;border-color:var(--accent)}
+  button.primary:hover{background:var(--accentd);color:#fff}
+  .note-s{font-size:.74rem;color:var(--muted);margin-top:6px}
+  .dash{display:grid;grid-template-columns:repeat(auto-fit,minmax(110px,1fr));gap:8px}
+  .kpi{border-radius:9px;padding:10px;text-align:center;color:#fff}
+  .kpi .n{font-size:1.5rem;font-weight:800;line-height:1.1}
+  .kpi .l{font-size:.72rem;opacity:.95}
+  table{width:100%;border-collapse:collapse;font-size:.78rem;margin-top:4px}
+  th,td{border:1px solid var(--line);padding:6px 8px;text-align:left;vertical-align:top}
+  th{background:var(--accentd);color:#fff;position:sticky;top:0;white-space:nowrap}
+  td.num,th.num{text-align:right;white-space:nowrap}
+  td.c,th.c{text-align:center}
+  .tablewrap{overflow:auto;max-height:460px;border-radius:8px;border:1px solid var(--line)}
+  .badge{display:inline-block;padding:2px 8px;border-radius:11px;font-size:.72rem;font-weight:700;color:#fff;white-space:nowrap}
+  .err{color:#d8443b;font-size:.78rem;margin-top:6px;white-space:pre-wrap}
+  footer{color:var(--muted);font-size:.72rem;text-align:center;margin-top:16px}
+  .legend{font-size:.72rem;color:var(--muted);margin-top:6px;line-height:1.6}
+  code{background:#eef2f6;padding:1px 5px;border-radius:4px;font-family:Consolas,monospace}
+  details{margin-top:12px}
+  summary{cursor:pointer;font-weight:700;color:#15436f;font-size:.9rem;padding:2px}
+  .wsum{font-weight:700}
+  .wsum.bad{color:#d8443b}.wsum.ok{color:#1a7f37}
+  .wtbl input{width:54px;text-align:right}
+  .factor-list{font-size:.72rem;color:var(--muted)}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>📊 リスク評価（年間監査計画）</h1>
+    <p>監査単位 × リスクファクター（1〜5点）× ウエイトの加重平均でリスクスコアを算出し、監査対象の優先順位を自動ランク付け（リスクアプローチ）。</p>
+  </header>
+
+  <div class="notice">
+    ⚠ <b>本ツールはデモアプリです</b>（サンプルデータでの動作確認用）。<br>
+    スコアはすべて<b>端末内のルールベース計算（加重平均）</b>で行っており、<b>AI・外部APIは一切使用していません</b>。入力データが外部へ送信されることはありません。
+  </div>
+
+  <details style="margin:12px 0;background:#eef4ff;border:1px solid #b9d0f5;border-left:4px solid #2f6fd0;border-radius:10px;padding:10px 14px">
+    <summary style="cursor:pointer;font-weight:700;color:#1f3c66;font-size:.92rem">🤖 このリスク評価をAIエージェント化するメリット</summary>
+    <div style="font-size:.84rem;color:#27313c;line-height:1.75;margin-top:8px">
+      <p>本デモは<b>各監査単位のリスクファクター点数を人が入力</b>し、固定ウエイトで加重平均する<b>ルールベース</b>です。手法は標準的（IIA基準・リスクアプローチ）ですが、<b>点数付けの根拠集め・最新化・新規リスクの発見</b>は人手に依存し、年1回の更新で陳腐化しやすいという限界があります。</p>
+      <p style="margin-top:8px">本ツールは <b>リスクファクターの定義・評価基準（5〜1）・ウエイト</b> という要件が明文化されています。これは<b>そのままAIエージェントの判断基準（システムプロンプト／ナレッジ）に落とし込める</b>ため、以下が可能になります。</p>
+      <ul style="margin:8px 0 0 18px">
+        <li><b>点数付けの自動ドラフト</b>：基幹データ・SOX結果・苦情件数・インシデント記録・前回監査調書などを根拠に、各ファクターの1〜5点を<u>根拠つきで提案</u></li>
+        <li><b>新規リスクの検知</b>：定義済み12ファクターに収まらない<b>新しい外部環境変化・規制・不正手口・戦略リスク</b>を文脈から拾い、ファクター追加を提案</li>
+        <li><b>トップダウン補正の言語化</b>：経営・取締役会・第2線のヒアリング内容を読み解き、スコアが低くても<b>戦略上重要な監査単位</b>を根拠つきで上位提案</li>
+        <li><b>動的なウエイト調整</b>：年度方針・重点リスクに応じてウエイト案を提示（例：サイバー重視ならIT依存・個人情報を加重）</li>
+        <li><b>計画ドラフトの自動生成</b>：ランキングから<b>年度監査計画案（選定理由・工数・時期）</b>のたたき台まで作成</li>
+        <li><b>常時モニタリング</b>：KRI・インシデントの変化を監視し、年1回ではなく<b>継続的にリスク評価を更新</b>（オフサイト・モニタリング）</li>
+      </ul>
+      <p style="margin-top:8px;color:#67768a">※ ルールベース＝加重平均の確定計算（再現性・説明性が高い）／AIエージェント＝根拠収集・文脈理解・最新化（カバレッジが広い）。リスク評価は <b>定量スコア（ルール）＋トップダウンの定性判断（AI）</b> のハイブリッドが実務的に有効で、この要件表が両者共通の設計図になります。</p>
+    </div>
+  </details>
+
+  <div class="card">
+    <h2>⚙️ 優先度のしきい値（加重スコア／5点満点）</h2>
+    <div class="cfg">
+      <label>「高」しきい値 ≥ <input id="cfgHi" type="number" step="0.05" value="3.00"></label>
+      <label>「中」しきい値 ≥ <input id="cfgMid" type="number" step="0.05" value="2.50"></label>
+    </div>
+    <div class="legend">加重スコア＝Σ(ファクター得点 × ウエイト)。<b>高</b>＝監査候補（優先）、<b>中</b>＝監査候補（要検討）、<b>低</b>＝次年度以降で検討。<br>
+      ※ 最終選定では、スコアが低くても経営・取締役会が重要と認識するもの（戦略リスク等）は<b>トップダウンで上位選定</b>し得る（例：海外戦略拠点・人材開発）。スコアは一次優先順位の目安。</div>
+  </div>
+
+  <details open>
+    <summary>📚 リスクファクター定義・ウエイト（編集可・合計100%）</summary>
+    <div class="card" style="margin-top:8px">
+      <div class="note-s" id="wsumLine">ウエイト合計：<span id="wsum" class="wsum">100%</span>（100%に調整してください）</div>
+      <div class="tablewrap" style="max-height:none;margin-top:8px">
+        <table class="wtbl">
+          <thead><tr><th class="c">#</th><th>リスクファクター</th><th>定義</th><th class="c">ウエイト(%)</th><th>5（高）</th><th>3（中）</th><th>1（低）</th></tr></thead>
+          <tbody id="factorBody"></tbody>
+        </table>
+      </div>
+    </div>
+  </details>
+
+  <div class="card">
+    <h2>📥 入力データ（1行＝1監査単位）</h2>
+    <div class="note-s" id="colHint">列順: 監査単位名, F1, F2, F3, F4, F5, F6, F7, F8, F9, F10, F11, F12（各1〜5点・タブ／カンマ区切り）</div>
+    <textarea id="input" spellcheck="false" placeholder="例：&#10;購買プロセス,1,1,3,4,3,3,5,5,4,3,5,3&#10;総務部,1,1,3,4,4,3,3,1,3,2,3,3"></textarea>
+    <div class="btns">
+      <button class="primary" onclick="run()">🔍 リスク評価を実行</button>
+      <button onclick="loadSample()">📋 サンプルデータ投入</button>
+      <button onclick="document.getElementById('input').value='';document.getElementById('out').innerHTML=''">クリア</button>
+      <button onclick="downloadCsv()">⬇ 結果CSV</button>
+    </div>
+    <div id="err" class="err"></div>
+  </div>
+
+  <div id="out"></div>
+
+  <footer>リスク評価（年間監査計画）デモ — 端末内ルールベース処理 / 外部送信なし ／ 手法: IIA基準・リスクアプローチ（加重リスクファクター方式）</footer>
+</div>
+
+<script>
+// ===== リスクファクター定義（演習5・6 ＝ 加重リスクファクター方式） =====
+const FACTORS = [
+  {n:"管理資産の全社資産に対する比率", w:5,  def:"その部門が管理している資産の全社資産に対する割合。",
+    c5:"20%以上", c3:"10%以上15%未満", c1:"3%未満"},
+  {n:"収益の全社収益に対する比率", w:10, def:"その部門が関係している収益の全社収益に対する割合。",
+    c5:"50%以上", c3:"15%以上20%未満", c1:"3%未満"},
+  {n:"業務目標達成のプレッシャー", w:15, def:"業務目標（収益・取引件数・顧客獲得数・過誤率・経費削減・業務効率・時間外勤務等）達成のプレッシャーの程度。",
+    c5:"極めて強いプレッシャーがある", c3:"目標はあるがプレッシャーは適切なレベル", c1:"目標未設定・プレッシャーなし"},
+  {n:"業務の複雑さ", w:10, def:"必要な経験・スキル、取扱商品・サービスの複雑さ、上長の関与レベル等から見た業務の複雑さ・難しさ。",
+    c5:"極めて複雑・高度なスキルや上長関与が必要", c3:"いくつか手順はあるが高度なスキルは不要", c1:"特別なスキル不要・比較的単純"},
+  {n:"当社の評判への影響度・風評被害の受けやすさ", w:10, def:"誤り・不備等が発生した場合に会社の評判失墜・風評被害を受ける程度。",
+    c5:"極めて大きな評判失墜・風評被害で経営に大影響", c3:"評判・風評被害はあるが経営に大影響はない", c1:"ほとんど評判に影響なし"},
+  {n:"前回監査からの変化の程度", w:10, def:"組織・人員・取扱商品・サービス・業務プロセス・マネジメント・方針等の変更の程度。",
+    c5:"極めて大きな変化で業務に大影響", c3:"変化はあるが自然発生程度で大影響なし", c1:"ほとんど変化なし"},
+  {n:"不正への脆弱性", w:5,  def:"取り扱う商品・原材料・情報・プロセス等の特質により不正の誘因が存在する程度。",
+    c5:"極めて高い脆弱性が存在", c3:"脆弱性・誘因はあるが大きくない", c1:"不正の発生は考えにくい"},
+  {n:"不祥事・事務事故・コンプライアンス違反等の発生状況", w:5, def:"不祥事・事務事故・コンプライアンス違反等の発生状況、増減率。",
+    c5:"重大な違反・不祥事・事故あり／突出した件数", c3:"軽微なものはあるが重大なし・件数も平均以下", c1:"事故・違反なし"},
+  {n:"前回監査・外部監査の結果", w:5, def:"前回監査・外部監査の指摘の重大性、件数。",
+    c5:"重大な指摘が多数", c3:"指摘はあるが重大でない／極めて少ない", c1:"指摘なし"},
+  {n:"前回監査からの年数", w:10, def:"前回監査からの経過年数。",
+    c5:"5年以上", c3:"2年以上3年未満", c1:"前年度実施"},
+  {n:"ITシステムへの依存の程度", w:5, def:"業務・プロセスのITシステムへの依存の程度。",
+    c5:"きわめて高い（マニュアル対応不可）", c3:"依存しているが最低限はマニュアル対応可", c1:"ほとんど依存していない"},
+  {n:"個人情報の取り扱い", w:10, def:"個人情報の取り扱いの程度。",
+    c5:"顧客含め大量の個人情報を取り扱う", c3:"取り扱うが限定的", c1:"取り扱わない"},
+];
+const SHORT = ["管理資産比率","収益比率","目標達成圧力","業務の複雑さ","評判・風評影響","前回監査からの変化","不正脆弱性","不祥事・事故・違反","監査指摘結果","前回監査からの年数","IT依存度","個人情報取扱"];
+
+// ===== サンプルデータ（演習5・6 回答例） =====
+const SAMPLE = [
+  ["購買プロセス",1,1,3,4,3,3,5,5,4,3,5,3],
+  ["総務部",1,1,3,4,4,3,3,1,3,2,3,3],
+  ["ロンドン支店",2,3,5,3,4,4,4,3,3,3,3,2],
+  ["固定資産管理プロセス",2,1,2,3,4,1,2,2,1,3,2,1],
+  ["個人情報管理",1,1,4,5,5,5,5,3,1,1,4,5],
+  ["緊急時対応",1,1,1,4,5,3,2,1,3,1,5,3],
+  ["給与支払業務（アウトソース）",1,1,3,2,2,1,3,1,1,3,1,5],
+  ["マレーシア○○社（買収先）",2,2,3,4,4,5,3,1,1,1,3,3],
+  ["エンドユーザーコンピューティング",1,1,1,3,4,5,3,1,3,3,5,3],
+  ["広報部",1,1,4,4,5,3,1,1,1,5,2,3],
+  ["投資運用部",5,4,4,4,3,1,2,1,1,3,5,1],
+];
+
+let RESULTS = [];
+
+function buildFactorTable(){
+  const tb=document.getElementById('factorBody');
+  tb.innerHTML=FACTORS.map((f,i)=>`<tr>
+    <td class="c">${i+1}</td>
+    <td>${f.n}</td>
+    <td style="font-size:.72rem;color:var(--muted)">${f.def}</td>
+    <td class="c"><input type="number" min="0" step="1" value="${f.w}" data-i="${i}" oninput="onWeight()"></td>
+    <td style="font-size:.72rem">${f.c5}</td>
+    <td style="font-size:.72rem">${f.c3}</td>
+    <td style="font-size:.72rem">${f.c1}</td>
+  </tr>`).join('');
+  onWeight();
+}
+function getWeights(){
+  return [...document.querySelectorAll('#factorBody input')].map(el=>parseFloat(el.value)||0);
+}
+function onWeight(){
+  const sum=getWeights().reduce((a,b)=>a+b,0);
+  const el=document.getElementById('wsum');
+  el.textContent=sum+'%';
+  el.className='wsum '+(Math.abs(sum-100)<0.001?'ok':'bad');
+}
+function loadSample(){
+  document.getElementById('input').value=SAMPLE.map(r=>r.join(',')).join('\n');
+}
+function esc(s){return String(s).replace(/[&<>]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]));}
+
+function run(){
+  const errEl=document.getElementById('err'); errEl.textContent='';
+  const weights=getWeights();
+  const wsum=weights.reduce((a,b)=>a+b,0);
+  const lines=document.getElementById('input').value.split(/\r?\n/).map(s=>s.trim()).filter(Boolean);
+  if(!lines.length){errEl.textContent='入力データがありません。「サンプルデータ投入」を押すか、データを貼り付けてください。';document.getElementById('out').innerHTML='';return;}
+  const hi=parseFloat(document.getElementById('cfgHi').value)||3;
+  const mid=parseFloat(document.getElementById('cfgMid').value)||2.5;
+  const wfrac=weights.map(w=>w/(wsum||100));  // 合計が100%でなくても正規化して比率算出
+  const rows=[]; const probs=[];
+  lines.forEach((ln,idx)=>{
+    const parts=ln.split(/[\t,]/).map(s=>s.trim());
+    const name=parts[0];
+    if(/^(監査単位|監査単位名)$/.test(name)) return; // ヘッダー行スキップ
+    const nums=parts.slice(1,13).map(x=>x===''?NaN:Number(x));
+    if(nums.length<12||nums.some(v=>isNaN(v))){
+      probs.push(`・${idx+1}行目「${name||'(空)'}」: 12個の得点が必要です（不足または数値以外）。`);
+      return;
+    }
+    if(nums.some(v=>v<1||v>5)){
+      probs.push(`・${idx+1}行目「${name}」: 得点は1〜5の範囲で入力してください。`);
+      return;
+    }
+    let score=0; const contrib=[];
+    for(let i=0;i<12;i++){score+=nums[i]*wfrac[i];contrib.push({i,v:nums[i],c:nums[i]*wfrac[i]});}
+    contrib.sort((a,b)=>b.c-a.c);
+    rows.push({name,nums,score,top:contrib.slice(0,3)});
+  });
+  if(probs.length) errEl.textContent=probs.join('\n');
+  if(!rows.length){document.getElementById('out').innerHTML='';return;}
+  rows.sort((a,b)=>b.score-a.score);
+  rows.forEach((r,i)=>{
+    r.rank=i+1;
+    r.level = r.score>=hi ? '高' : (r.score>=mid ? '中' : '低');
+    r.rec   = r.level==='高' ? '監査候補（優先）' : (r.level==='中' ? '監査候補（要検討）' : '次年度以降で検討');
+  });
+  RESULTS={rows,weights,wsum,hi,mid};
+  render();
+}
+
+function bandColor(l){return l==='高'?'#cc0000':(l==='中'?'#e0a000':'#6b8fb5');}
+
+function render(){
+  const {rows,wsum,hi}=RESULTS;
+  const n=rows.length;
+  const max=rows[0].score;
+  const avg=rows.reduce((a,r)=>a+r.score,0)/n;
+  const hiN=rows.filter(r=>r.level==='高').length;
+  let h=`<div class="card"><h2>📈 リスク評価サマリー（${n}単位）${Math.abs(wsum-100)<0.001?'':`<span style="font-weight:400;font-size:.74rem;color:#d8443b">／ ウエイト合計${wsum}%を100%として正規化</span>`}</h2><div class="dash">
+    <div class="kpi" style="background:#15436f"><div class="n">${n}</div><div class="l">監査単位数</div></div>
+    <div class="kpi" style="background:#cc0000"><div class="n">${max.toFixed(2)}</div><div class="l">最高スコア</div></div>
+    <div class="kpi" style="background:#1f5f9e"><div class="n">${avg.toFixed(2)}</div><div class="l">平均スコア</div></div>
+    <div class="kpi" style="background:#990000"><div class="n">${hiN}</div><div class="l">監査候補（優先）</div></div>
+  </div></div>`;
+
+  // ランキング
+  h+=`<div class="card"><h2>🏆 監査対象 優先順位ランキング</h2><div class="tablewrap"><table>
+    <thead><tr><th class="c">順位</th><th>監査単位</th><th class="num">加重スコア</th><th class="c">優先度</th><th>主要リスク要因（寄与上位3）</th><th>推奨アクション</th></tr></thead><tbody>`;
+  rows.forEach(r=>{
+    const tops=r.top.map(t=>`${SHORT[t.i]}(${t.v})`).join('、');
+    h+=`<tr>
+      <td class="c">${r.rank}</td>
+      <td><b>${esc(r.name)}</b></td>
+      <td class="num"><b>${r.score.toFixed(2)}</b></td>
+      <td class="c"><span class="badge" style="background:${bandColor(r.level)}">${r.level}</span></td>
+      <td style="font-size:.74rem">${esc(tops)}</td>
+      <td>${r.rec}</td>
+    </tr>`;
+  });
+  h+=`</tbody></table></div>
+    <div class="legend">優先度しきい値：高 ≥ ${hi.toFixed(2)} ／ 中 ≥ ${RESULTS.mid.toFixed(2)}。最終的な監査候補の選定では、戦略リスク・経営/取締役会の重要認識（トップダウン）も加味します。</div></div>`;
+
+  // スコアマトリクス
+  h+=`<div class="card"><h2>🔢 スコアマトリクス（全リスクファクター）</h2><div class="tablewrap"><table>
+    <thead><tr><th>監査単位</th>${SHORT.map((s,i)=>`<th class="c" title="${esc(FACTORS[i].n)}">${i+1}</th>`).join('')}<th class="num">スコア</th></tr></thead><tbody>`;
+  rows.forEach(r=>{
+    h+=`<tr><td><b>${esc(r.name)}</b></td>${r.nums.map(v=>`<td class="c">${v}</td>`).join('')}<td class="num"><b>${r.score.toFixed(2)}</b></td></tr>`;
+  });
+  h+=`</tbody></table></div><div class="legend">列番号とファクター名：${SHORT.map((s,i)=>`${i+1}=${s}`).join(' / ')}</div></div>`;
+
+  document.getElementById('out').innerHTML=h;
+}
+
+function downloadCsv(){
+  if(!RESULTS.rows||!RESULTS.rows.length){alert('先に「リスク評価を実行」を押してください。');return;}
+  const head=['順位','監査単位','加重スコア','優先度','推奨アクション',...SHORT.map((s,i)=>`F${i+1}_${s}`)];
+  const lines=[head.join(',')];
+  RESULTS.rows.forEach(r=>{
+    const row=[r.rank,`"${r.name.replace(/"/g,'""')}"`,r.score.toFixed(2),r.level,r.rec,...r.nums];
+    lines.push(row.join(','));
+  });
+  const blob=new Blob(['﻿'+lines.join('\r\n')],{type:'text/csv;charset=utf-8'});
+  const a=document.createElement('a');a.href=URL.createObjectURL(blob);
+  a.download='リスク評価結果.csv';a.click();
+}
+
+buildFactorTable();
+loadSample();
+</script>
+</body>
+</html>
