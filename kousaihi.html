@@ -413,10 +413,13 @@ function audit(r,cfg){
   const hidden = (luxe || cat==='ゴルフ') && (noPrior||afterFact);
   if(hidden) flags.push('隠蔽目的の事前申請回避('+(cat==='ゴルフ'?'ゴルフ接待':'高級店')+'×事前申請なし)');
   // 格付け
+  const apprNGflag = flags.some(f=>/決裁者役職不備/.test(f));
+  const isKousai = judged==='交際費';
   let grade;
   if((luxe&&roleMismatch)||hidden) grade='要改善';
-  else if(flags.some(f=>/隠れ交際費|社内飲食費|福利厚生費|決裁遅延|事後決裁\(理由なし\)|事前申請なし|接待旅費|決裁者役職不備/.test(f))) grade='要改善(軽微)';
-  else if(flags.some(f=>/事後決裁\(理由あり\)/.test(f))) grade='注意';
+  else if(flags.some(f=>/隠れ交際費|社内飲食費|福利厚生費|決裁遅延|事後決裁\(理由なし\)|事前申請なし|接待旅費/.test(f))) grade='要改善(軽微)';
+  else if(apprNGflag && isKousai) grade='要改善(軽微)';                       // 交際費の決裁者役職不備は要改善(軽微)
+  else if((apprNGflag && !isKousai) || flags.some(f=>/事後決裁\(理由あり\)/.test(f))) grade='注意'; // 交際費以外の決裁者役職不備は注意に格下げ
   else grade='適正';
   const tax_treat = judged==='交際費' ? '交際費等（損金不算入）' : '損金算入可能（交際費除外）';
   // 適正の根拠（簡潔）
