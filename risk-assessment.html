@@ -128,6 +128,7 @@
       <button class="primary" onclick="run()">🔍 リスク評価を実行</button>
       <button onclick="loadSample()">📋 サンプルデータ投入</button>
       <button onclick="document.getElementById('input').value='';document.getElementById('out').innerHTML=''">クリア</button>
+      <button onclick="downloadXlsx()">⬇ Excel(.xlsx)</button>
       <button onclick="downloadCsv()">⬇ 結果CSV</button>
     </div>
     <div id="err" class="err"></div>
@@ -296,6 +297,8 @@ function run(){
 }
 
 function bandColor(l){return l==='高'?'#cc0000':(l==='中'?'#e0a000':'#6b8fb5');}
+const HEAT=['#63BE7B','#A9D67F','#FFEB84','#F9A66C','#F8696B']; // 1→5（緑→黄→赤）
+function heatColor(v){return HEAT[Math.max(1,Math.min(5,Math.round(v)))-1];}
 
 function render(){
   const {rows,wsum,hi}=RESULTS;
@@ -327,13 +330,19 @@ function render(){
   h+=`</tbody></table></div>
     <div class="legend">優先度しきい値：高 ≥ ${hi.toFixed(2)} ／ 中 ≥ ${RESULTS.mid.toFixed(2)}。最終的な監査候補の選定では、戦略リスク・経営/取締役会の重要認識（トップダウン）も加味します。</div></div>`;
 
-  // スコアマトリクス
-  h+=`<div class="card"><h2>🔢 スコアマトリクス（全リスクファクター）</h2><div class="tablewrap"><table>
+  // スコアマトリクス（ヒートマップ）
+  h+=`<div class="card"><h2>🔢 スコアマトリクス（ヒートマップ）</h2><div class="tablewrap"><table>
     <thead><tr><th>監査単位</th>${SHORT.map((s,i)=>`<th class="c" title="${esc(FACTORS[i].n)}">${i+1}</th>`).join('')}<th class="num">スコア</th></tr></thead><tbody>`;
   rows.forEach(r=>{
-    h+=`<tr><td><b>${esc(r.name)}</b></td>${r.nums.map(v=>`<td class="c">${v}</td>`).join('')}<td class="num"><b>${r.score.toFixed(2)}</b></td></tr>`;
+    h+=`<tr><td><b>${esc(r.name)}</b></td>${r.nums.map(v=>`<td class="c" style="background:${heatColor(v)};color:#27313c;font-weight:600">${v}</td>`).join('')}<td class="num"><b>${r.score.toFixed(2)}</b></td></tr>`;
   });
-  h+=`</tbody></table></div><div class="legend">列番号とファクター名：${SHORT.map((s,i)=>`${i+1}=${s}`).join(' / ')}</div></div>`;
+  h+=`</tbody></table></div>
+    <div class="legend" style="margin-top:8px;display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+      <span>リスク度（得点）:</span>
+      ${[1,2,3,4,5].map(v=>`<span style="display:inline-block;padding:2px 9px;border-radius:4px;background:${heatColor(v)};color:#27313c;font-weight:700">${v}</span>`).join('')}
+      <span>（1=低 → 5=高）</span>
+    </div>
+    <div class="legend">列番号とファクター名：${SHORT.map((s,i)=>`${i+1}=${s}`).join(' / ')}</div></div>`;
 
   document.getElementById('out').innerHTML=h;
 }
@@ -349,6 +358,103 @@ function downloadCsv(){
   const blob=new Blob(['﻿'+lines.join('\r\n')],{type:'text/csv;charset=utf-8'});
   const a=document.createElement('a');a.href=URL.createObjectURL(blob);
   a.download='リスク評価結果.csv';a.click();
+}
+
+// ===== xlsx 出力（外部ライブラリ不使用：ZIP+CRC32+OOXMLを純JSで生成・ヒートマップ塗り込み）=====
+const _crcTab=(()=>{const t=new Uint32Array(256);for(let n=0;n<256;n++){let c=n;for(let k=0;k<8;k++)c=c&1?0xEDB88320^(c>>>1):c>>>1;t[n]=c>>>0;}return t;})();
+function crc32(u8){let c=0xFFFFFFFF;for(let i=0;i<u8.length;i++)c=_crcTab[(c^u8[i])&0xFF]^(c>>>8);return (c^0xFFFFFFFF)>>>0;}
+function zipStore(files){
+  // files:[{name, bytes:Uint8Array}] → ZIP(無圧縮) Uint8Array
+  const enc=new TextEncoder();const locals=[];const central=[];let offset=0;
+  const u16=v=>[v&255,(v>>8)&255];const u32=v=>[v&255,(v>>8)&255,(v>>16)&255,(v>>24)&255];
+  files.forEach(f=>{
+    const nameB=enc.encode(f.name);const data=f.bytes;const crc=crc32(data);
+    const lh=[].concat(u32(0x04034b50),u16(20),u16(0),u16(0),u16(0),u16(0),u32(crc),u32(data.length),u32(data.length),u16(nameB.length),u16(0));
+    const lhB=new Uint8Array(lh);
+    locals.push(lhB,nameB,data);
+    const ch=[].concat(u32(0x02014b50),u16(20),u16(20),u16(0),u16(0),u16(0),u16(0),u32(crc),u32(data.length),u32(data.length),u16(nameB.length),u16(0),u16(0),u16(0),u16(0),u32(0),u32(offset));
+    central.push(new Uint8Array(ch),nameB);
+    offset+=lhB.length+nameB.length+data.length;
+  });
+  let cdSize=0;central.forEach(b=>cdSize+=b.length);const cdOffset=offset;
+  const eocd=new Uint8Array([].concat(u32(0x06054b50),u16(0),u16(0),u16(files.length),u16(files.length),u32(cdSize),u32(cdOffset),u16(0)));
+  const all=[...locals,...central,eocd];let total=0;all.forEach(b=>total+=b.length);
+  const out=new Uint8Array(total);let p=0;all.forEach(b=>{out.set(b,p);p+=b.length;});return out;
+}
+function xesc(s){return String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));}
+function colLetter(n){let s='';while(n>0){const m=(n-1)%26;s=String.fromCharCode(65+m)+s;n=(n-m-1)/26;}return s;}
+function argb(hex){return 'FF'+hex.replace('#','').toUpperCase();}
+
+function buildXlsx(){
+  const rows=RESULTS.rows;const N=FACTORS.length;
+  // スタイル: 0=既定 1=ヘッダ 2..6=ヒート(得点1..5) 7=高 8=中 9=低 10=文字(枠) 11=太字名(枠) 12=数値(枠)
+  const heatFills=HEAT.map(h=>`<fill><patternFill patternType="solid"><fgColor rgb="${argb(h)}"/></patternFill></fill>`).join('');
+  const priFills=[bandColor('高'),bandColor('中'),bandColor('低')].map(h=>`<fill><patternFill patternType="solid"><fgColor rgb="${argb(h)}"/></patternFill></fill>`).join('');
+  const styles=`<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<styleSheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">
+<fonts count="3"><font><sz val="11"/><name val="Calibri"/></font><font><b/><sz val="11"/><name val="Calibri"/></font><font><b/><color rgb="FFFFFFFF"/><sz val="11"/><name val="Calibri"/></font></fonts>
+<fills count="${2+5+3+1}"><fill><patternFill patternType="none"/></fill><fill><patternFill patternType="gray125"/></fill>${heatFills}${priFills}<fill><patternFill patternType="solid"><fgColor rgb="${argb('#990000')}"/></patternFill></fill></fills>
+<borders count="2"><border><left/><right/><top/><bottom/><diagonal/></border><border><left style="thin"><color rgb="FFD7E0E8"/></left><right style="thin"><color rgb="FFD7E0E8"/></right><top style="thin"><color rgb="FFD7E0E8"/></top><bottom style="thin"><color rgb="FFD7E0E8"/></bottom><diagonal/></border></borders>
+<cellStyleXfs count="1"><xf numFmtId="0" fontId="0" fillId="0" borderId="0"/></cellStyleXfs>
+<cellXfs count="13">
+<xf numFmtId="0" fontId="0" fillId="0" borderId="0" xfId="0"/>
+<xf numFmtId="0" fontId="2" fillId="10" borderId="1" xfId="0" applyFont="1" applyFill="1" applyBorder="1" applyAlignment="1"><alignment horizontal="center" vertical="center" wrapText="1"/></xf>
+<xf numFmtId="0" fontId="0" fillId="2" borderId="1" xfId="0" applyFill="1" applyBorder="1" applyAlignment="1"><alignment horizontal="center"/></xf>
+<xf numFmtId="0" fontId="0" fillId="3" borderId="1" xfId="0" applyFill="1" applyBorder="1" applyAlignment="1"><alignment horizontal="center"/></xf>
+<xf numFmtId="0" fontId="0" fillId="4" borderId="1" xfId="0" applyFill="1" applyBorder="1" applyAlignment="1"><alignment horizontal="center"/></xf>
+<xf numFmtId="0" fontId="0" fillId="5" borderId="1" xfId="0" applyFill="1" applyBorder="1" applyAlignment="1"><alignment horizontal="center"/></xf>
+<xf numFmtId="0" fontId="0" fillId="6" borderId="1" xfId="0" applyFill="1" applyBorder="1" applyAlignment="1"><alignment horizontal="center"/></xf>
+<xf numFmtId="0" fontId="2" fillId="7" borderId="1" xfId="0" applyFont="1" applyFill="1" applyBorder="1" applyAlignment="1"><alignment horizontal="center"/></xf>
+<xf numFmtId="0" fontId="2" fillId="8" borderId="1" xfId="0" applyFont="1" applyFill="1" applyBorder="1" applyAlignment="1"><alignment horizontal="center"/></xf>
+<xf numFmtId="0" fontId="2" fillId="9" borderId="1" xfId="0" applyFont="1" applyFill="1" applyBorder="1" applyAlignment="1"><alignment horizontal="center"/></xf>
+<xf numFmtId="0" fontId="0" fillId="0" borderId="1" xfId="0" applyBorder="1"/>
+<xf numFmtId="0" fontId="1" fillId="0" borderId="1" xfId="0" applyFont="1" applyBorder="1"/>
+<xf numFmtId="2" fontId="1" fillId="0" borderId="1" xfId="0" applyFont="1" applyBorder="1" applyAlignment="1"><alignment horizontal="right"/></xf>
+</cellXfs></styleSheet>`;
+
+  // セル生成
+  const sCell=(ref,s,txt)=>`<c r="${ref}" s="${s}" t="inlineStr"><is><t xml:space="preserve">${xesc(txt)}</t></is></c>`;
+  const nCell=(ref,s,num)=>`<c r="${ref}" s="${s}"><v>${num}</v></c>`;
+  const priStyle=l=>l==='高'?7:(l==='中'?8:9);
+  let sd='';let rr=1;
+  // ヘッダ
+  let hc=sCell('A1',1,'順位')+sCell('B1',1,'監査単位')+sCell('C1',1,'加重スコア')+sCell('D1',1,'優先度');
+  for(let i=0;i<N;i++) hc+=sCell(colLetter(5+i)+'1',1,(i+1)+'. '+(FACTORS[i].short||FACTORS[i].n));
+  sd+=`<row r="1">${hc}</row>`;
+  rows.forEach(r=>{rr++;
+    let c=nCell('A'+rr,10,r.rank)+sCell('B'+rr,11,r.name)+nCell('C'+rr,12,r.score.toFixed(2))+sCell('D'+rr,priStyle(r.level),r.level);
+    for(let i=0;i<N;i++) c+=nCell(colLetter(5+i)+rr,1+Math.max(1,Math.min(5,Math.round(r.nums[i]))),r.nums[i]);
+    sd+=`<row r="${rr}">${c}</row>`;
+  });
+  const lastCol=colLetter(4+N);
+  const cols=`<cols><col min="1" max="1" width="6"/><col min="2" max="2" width="30"/><col min="3" max="3" width="11"/><col min="4" max="4" width="8"/><col min="5" max="${4+N}" width="6"/></cols>`;
+  const sheet=`<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><dimension ref="A1:${lastCol}${rr}"/><sheetViews><sheetView workbookViewId="0"><pane ySplit="1" topLeftCell="A2" activePane="bottomLeft" state="frozen"/></sheetView></sheetViews>${cols}<sheetData>${sd}</sheetData></worksheet>`;
+
+  const ct=`<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/><Override PartName="/xl/worksheets/sheet1.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/><Override PartName="/xl/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.styles+xml"/></Types>`;
+  const rels=`<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="xl/workbook.xml"/></Relationships>`;
+  const wb=`<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><sheets><sheet name="リスク評価" sheetId="1" r:id="rId1"/></sheets></workbook>`;
+  const wbRels=`<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet1.xml"/><Relationship Id="rId2" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/></Relationships>`;
+  const enc=new TextEncoder();
+  return zipStore([
+    {name:'[Content_Types].xml',bytes:enc.encode(ct)},
+    {name:'_rels/.rels',bytes:enc.encode(rels)},
+    {name:'xl/workbook.xml',bytes:enc.encode(wb)},
+    {name:'xl/_rels/workbook.xml.rels',bytes:enc.encode(wbRels)},
+    {name:'xl/styles.xml',bytes:enc.encode(styles)},
+    {name:'xl/worksheets/sheet1.xml',bytes:enc.encode(sheet)},
+  ]);
+}
+function downloadXlsx(){
+  if(!RESULTS.rows||!RESULTS.rows.length){alert('先に「リスク評価を実行」を押してください。');return;}
+  const bytes=buildXlsx();
+  const blob=new Blob([bytes],{type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'});
+  const a=document.createElement('a');a.href=URL.createObjectURL(blob);
+  a.download='リスク評価結果.xlsx';a.click();
 }
 
 buildFactorTable();
