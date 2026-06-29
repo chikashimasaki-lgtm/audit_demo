@@ -108,6 +108,15 @@
           <tbody id="factorBody"></tbody>
         </table>
       </div>
+      <div style="margin-top:14px">
+        <div class="note-s">📝 定義・ウエイトを <b>JSON で直接編集</b>できます（表のウエイト欄の変更は自動でJSONに反映）。各要素 ＝ <code>n</code>:名称 / <code>short</code>:略称 / <code>def</code>:定義 / <code>w</code>:ウエイト(%) / <code>c5,c3,c1</code>:評価基準。ファクターの追加・削除も可。</div>
+        <textarea id="defJson" spellcheck="false" style="height:240px;margin-top:6px"></textarea>
+        <div class="btns">
+          <button class="primary" onclick="applyJson()">✅ 定義を適用</button>
+          <button onclick="resetDef()">↩ 既定に戻す</button>
+        </div>
+        <div id="defErr" class="err"></div>
+      </div>
     </div>
   </details>
 
@@ -131,33 +140,35 @@
 
 <script>
 // ===== リスクファクター定義（演習5・6 ＝ 加重リスクファクター方式） =====
-const FACTORS = [
-  {n:"管理資産の全社資産に対する比率", w:5,  def:"その部門が管理している資産の全社資産に対する割合。",
+// n:名称 / short:略称 / def:定義 / w:ウエイト(%) / c5,c3,c1:評価基準（5・3・1点）
+const DEFAULT_FACTORS = [
+  {n:"管理資産の全社資産に対する比率", short:"管理資産比率", w:5,  def:"その部門が管理している資産の全社資産に対する割合。",
     c5:"20%以上", c3:"10%以上15%未満", c1:"3%未満"},
-  {n:"収益の全社収益に対する比率", w:10, def:"その部門が関係している収益の全社収益に対する割合。",
+  {n:"収益の全社収益に対する比率", short:"収益比率", w:10, def:"その部門が関係している収益の全社収益に対する割合。",
     c5:"50%以上", c3:"15%以上20%未満", c1:"3%未満"},
-  {n:"業務目標達成のプレッシャー", w:15, def:"業務目標（収益・取引件数・顧客獲得数・過誤率・経費削減・業務効率・時間外勤務等）達成のプレッシャーの程度。",
+  {n:"業務目標達成のプレッシャー", short:"目標達成圧力", w:15, def:"業務目標（収益・取引件数・顧客獲得数・過誤率・経費削減・業務効率・時間外勤務等）達成のプレッシャーの程度。",
     c5:"極めて強いプレッシャーがある", c3:"目標はあるがプレッシャーは適切なレベル", c1:"目標未設定・プレッシャーなし"},
-  {n:"業務の複雑さ", w:10, def:"必要な経験・スキル、取扱商品・サービスの複雑さ、上長の関与レベル等から見た業務の複雑さ・難しさ。",
+  {n:"業務の複雑さ", short:"業務の複雑さ", w:10, def:"必要な経験・スキル、取扱商品・サービスの複雑さ、上長の関与レベル等から見た業務の複雑さ・難しさ。",
     c5:"極めて複雑・高度なスキルや上長関与が必要", c3:"いくつか手順はあるが高度なスキルは不要", c1:"特別なスキル不要・比較的単純"},
-  {n:"当社の評判への影響度・風評被害の受けやすさ", w:10, def:"誤り・不備等が発生した場合に会社の評判失墜・風評被害を受ける程度。",
+  {n:"当社の評判への影響度・風評被害の受けやすさ", short:"評判・風評影響", w:10, def:"誤り・不備等が発生した場合に会社の評判失墜・風評被害を受ける程度。",
     c5:"極めて大きな評判失墜・風評被害で経営に大影響", c3:"評判・風評被害はあるが経営に大影響はない", c1:"ほとんど評判に影響なし"},
-  {n:"前回監査からの変化の程度", w:10, def:"組織・人員・取扱商品・サービス・業務プロセス・マネジメント・方針等の変更の程度。",
+  {n:"前回監査からの変化の程度", short:"前回監査からの変化", w:10, def:"組織・人員・取扱商品・サービス・業務プロセス・マネジメント・方針等の変更の程度。",
     c5:"極めて大きな変化で業務に大影響", c3:"変化はあるが自然発生程度で大影響なし", c1:"ほとんど変化なし"},
-  {n:"不正への脆弱性", w:5,  def:"取り扱う商品・原材料・情報・プロセス等の特質により不正の誘因が存在する程度。",
+  {n:"不正への脆弱性", short:"不正脆弱性", w:5,  def:"取り扱う商品・原材料・情報・プロセス等の特質により不正の誘因が存在する程度。",
     c5:"極めて高い脆弱性が存在", c3:"脆弱性・誘因はあるが大きくない", c1:"不正の発生は考えにくい"},
-  {n:"不祥事・事務事故・コンプライアンス違反等の発生状況", w:5, def:"不祥事・事務事故・コンプライアンス違反等の発生状況、増減率。",
+  {n:"不祥事・事務事故・コンプライアンス違反等の発生状況", short:"不祥事・事故・違反", w:5, def:"不祥事・事務事故・コンプライアンス違反等の発生状況、増減率。",
     c5:"重大な違反・不祥事・事故あり／突出した件数", c3:"軽微なものはあるが重大なし・件数も平均以下", c1:"事故・違反なし"},
-  {n:"前回監査・外部監査の結果", w:5, def:"前回監査・外部監査の指摘の重大性、件数。",
+  {n:"前回監査・外部監査の結果", short:"監査指摘結果", w:5, def:"前回監査・外部監査の指摘の重大性、件数。",
     c5:"重大な指摘が多数", c3:"指摘はあるが重大でない／極めて少ない", c1:"指摘なし"},
-  {n:"前回監査からの年数", w:10, def:"前回監査からの経過年数。",
+  {n:"前回監査からの年数", short:"前回監査からの年数", w:10, def:"前回監査からの経過年数。",
     c5:"5年以上", c3:"2年以上3年未満", c1:"前年度実施"},
-  {n:"ITシステムへの依存の程度", w:5, def:"業務・プロセスのITシステムへの依存の程度。",
+  {n:"ITシステムへの依存の程度", short:"IT依存度", w:5, def:"業務・プロセスのITシステムへの依存の程度。",
     c5:"きわめて高い（マニュアル対応不可）", c3:"依存しているが最低限はマニュアル対応可", c1:"ほとんど依存していない"},
-  {n:"個人情報の取り扱い", w:10, def:"個人情報の取り扱いの程度。",
+  {n:"個人情報の取り扱い", short:"個人情報取扱", w:10, def:"個人情報の取り扱いの程度。",
     c5:"顧客含め大量の個人情報を取り扱う", c3:"取り扱うが限定的", c1:"取り扱わない"},
 ];
-const SHORT = ["管理資産比率","収益比率","目標達成圧力","業務の複雑さ","評判・風評影響","前回監査からの変化","不正脆弱性","不祥事・事故・違反","監査指摘結果","前回監査からの年数","IT依存度","個人情報取扱"];
+let FACTORS = JSON.parse(JSON.stringify(DEFAULT_FACTORS));  // 編集対象（JSONで可変）
+let SHORT = FACTORS.map(f=>f.short||f.n);
 
 // ===== サンプルデータ（演習5・6 回答例） =====
 const SAMPLE = [
@@ -177,26 +188,66 @@ const SAMPLE = [
 let RESULTS = [];
 
 function buildFactorTable(){
+  SHORT=FACTORS.map(f=>f.short||f.n);
   const tb=document.getElementById('factorBody');
   tb.innerHTML=FACTORS.map((f,i)=>`<tr>
     <td class="c">${i+1}</td>
-    <td>${f.n}</td>
-    <td style="font-size:.72rem;color:var(--muted)">${f.def}</td>
+    <td>${esc(f.n)}</td>
+    <td style="font-size:.72rem;color:var(--muted)">${esc(f.def||'')}</td>
     <td class="c"><input type="number" min="0" step="1" value="${f.w}" data-i="${i}" oninput="onWeight()"></td>
-    <td style="font-size:.72rem">${f.c5}</td>
-    <td style="font-size:.72rem">${f.c3}</td>
-    <td style="font-size:.72rem">${f.c1}</td>
+    <td style="font-size:.72rem">${esc(f.c5||'')}</td>
+    <td style="font-size:.72rem">${esc(f.c3||'')}</td>
+    <td style="font-size:.72rem">${esc(f.c1||'')}</td>
   </tr>`).join('');
+  updateInputHint();
   onWeight();
 }
 function getWeights(){
   return [...document.querySelectorAll('#factorBody input')].map(el=>parseFloat(el.value)||0);
 }
 function onWeight(){
-  const sum=getWeights().reduce((a,b)=>a+b,0);
+  // 表のウエイト編集を FACTORS に書き戻し、JSONにも反映
+  const ws=getWeights();
+  ws.forEach((w,i)=>{if(FACTORS[i])FACTORS[i].w=w;});
+  const sum=ws.reduce((a,b)=>a+b,0);
   const el=document.getElementById('wsum');
-  el.textContent=sum+'%';
+  el.textContent=(Math.round(sum*100)/100)+'%';
   el.className='wsum '+(Math.abs(sum-100)<0.001?'ok':'bad');
+  refreshJson();
+}
+function refreshJson(){
+  document.getElementById('defJson').value=JSON.stringify(FACTORS,null,2);
+}
+function updateInputHint(){
+  const cols=FACTORS.map((f,i)=>'F'+(i+1)).join(', ');
+  document.getElementById('colHint').textContent=`列順: 監査単位名, ${cols}（各1〜5点・タブ／カンマ区切り・${FACTORS.length}ファクター）`;
+}
+function applyJson(){
+  const e=document.getElementById('defErr'); e.textContent='';
+  let data;
+  try{ data=JSON.parse(document.getElementById('defJson').value); }
+  catch(ex){ e.textContent='JSONの構文エラー: '+ex.message; return; }
+  if(!Array.isArray(data)||!data.length){ e.textContent='1個以上のリスクファクターを配列で指定してください。'; return; }
+  const norm=[];
+  for(let i=0;i<data.length;i++){
+    const d=data[i]||{};
+    if(typeof d.n!=='string'||!d.n.trim()){ e.textContent=`${i+1}番目: "n"（名称）は必須の文字列です。`; return; }
+    const w=Number(d.w);
+    if(isNaN(w)||w<0){ e.textContent=`${i+1}番目「${d.n}」: "w"（ウエイト）は0以上の数値で指定してください。`; return; }
+    norm.push({n:d.n.trim(), short:(d.short&&String(d.short).trim())||d.n.trim(), def:d.def?String(d.def):'',
+      w:w, c5:d.c5?String(d.c5):'', c3:d.c3?String(d.c3):'', c1:d.c1?String(d.c1):''});
+  }
+  FACTORS=norm;
+  buildFactorTable();
+  refreshJson();
+  if(RESULTS&&RESULTS.rows&&RESULTS.rows.length) run();
+}
+function resetDef(){
+  FACTORS=JSON.parse(JSON.stringify(DEFAULT_FACTORS));
+  document.getElementById('defErr').textContent='';
+  buildFactorTable();
+  refreshJson();
+  if(RESULTS&&RESULTS.rows&&RESULTS.rows.length) run();
 }
 function loadSample(){
   document.getElementById('input').value=SAMPLE.map(r=>r.join(',')).join('\n');
@@ -211,15 +262,16 @@ function run(){
   if(!lines.length){errEl.textContent='入力データがありません。「サンプルデータ投入」を押すか、データを貼り付けてください。';document.getElementById('out').innerHTML='';return;}
   const hi=parseFloat(document.getElementById('cfgHi').value)||3;
   const mid=parseFloat(document.getElementById('cfgMid').value)||2.5;
+  const N=FACTORS.length;
   const wfrac=weights.map(w=>w/(wsum||100));  // 合計が100%でなくても正規化して比率算出
   const rows=[]; const probs=[];
   lines.forEach((ln,idx)=>{
     const parts=ln.split(/[\t,]/).map(s=>s.trim());
     const name=parts[0];
     if(/^(監査単位|監査単位名)$/.test(name)) return; // ヘッダー行スキップ
-    const nums=parts.slice(1,13).map(x=>x===''?NaN:Number(x));
-    if(nums.length<12||nums.some(v=>isNaN(v))){
-      probs.push(`・${idx+1}行目「${name||'(空)'}」: 12個の得点が必要です（不足または数値以外）。`);
+    const nums=parts.slice(1,1+N).map(x=>x===''?NaN:Number(x));
+    if(nums.length<N||nums.some(v=>isNaN(v))){
+      probs.push(`・${idx+1}行目「${name||'(空)'}」: ${N}個の得点が必要です（不足または数値以外）。`);
       return;
     }
     if(nums.some(v=>v<1||v>5)){
@@ -227,7 +279,7 @@ function run(){
       return;
     }
     let score=0; const contrib=[];
-    for(let i=0;i<12;i++){score+=nums[i]*wfrac[i];contrib.push({i,v:nums[i],c:nums[i]*wfrac[i]});}
+    for(let i=0;i<N;i++){score+=nums[i]*wfrac[i];contrib.push({i,v:nums[i],c:nums[i]*wfrac[i]});}
     contrib.sort((a,b)=>b.c-a.c);
     rows.push({name,nums,score,top:contrib.slice(0,3)});
   });
