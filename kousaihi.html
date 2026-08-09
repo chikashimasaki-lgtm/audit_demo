@@ -482,14 +482,14 @@ function render(cfg){
     <th>申請→判定科目</th><th>検知フラグ／適正根拠</th></tr></thead><tbody>`;
   RESULTS.forEach(a=>{
     const cls=GMAP[a.grade];
-    h+=`<tr class="${cls}"><td>${a.r['精算申請ID']}</td>
+    h+=`<tr class="${cls}"><td>${esc(a.r['精算申請ID'])}</td>
       <td><span class="badge b-${cls}">${a.grade}</span></td>
-      <td>${a.r['店舗']}${a.luxe?' ⚠高級店':''}</td>
+      <td>${esc(a.r['店舗'])}${a.luxe?' ⚠高級店':''}</td>
       <td style="text-align:right">${yen(a.gross)}</td>
       <td style="text-align:right">${yen(a.taxExcl)}${a.registered?'':' <span style="color:#d8443b">*経過措置</span>'}</td>
       <td style="text-align:right;font-weight:700">${yen(a.per)}</td>
-      <td>${a.applied}→${a.judged}${a.applied!==a.judged?' ⚠':''}</td>
-      <td>${a.flags.length?`<span class="flags">${a.flags.join('、')}</span>`:`<span style="color:#2f9e5f">✔ ${a.basis||'適正'}</span>`}</td></tr>`;
+      <td>${esc(a.applied)}→${a.judged}${a.applied!==a.judged?' ⚠':''}</td>
+      <td>${a.flags.length?`<span class="flags">${esc(a.flags.join('、'))}</span>`:`<span style="color:#2f9e5f">✔ ${esc(a.basis||'適正')}</span>`}</td></tr>`;
   });
   h+=`</tbody></table></div></div>`;
 
@@ -547,20 +547,20 @@ function render(cfg){
 `■ 1. 対象案件
   確認書発行日：${today}　／　発行：内部監査部
   被監査部門：（　　　　　　　　）
-  対象精算申請ID：${r['精算申請ID']}　／　関連決裁番号：${r['関連決裁番号']||'（事前申請なし）'}
-  申請時勘定科目：${a.applied} ／ 利用店舗：${r['店舗']}
+  対象精算申請ID：${esc(r['精算申請ID'])}　／　関連決裁番号：${esc(r['関連決裁番号']||'（事前申請なし）')}
+  申請時勘定科目：${esc(a.applied)} ／ 利用店舗：${esc(r['店舗'])}
   支払金額（税込）：${yen(a.gross)}円 ／ 参加${a.ppl}名（社外${a.ext}名）
 
 ■ 2. 監査人の所見（ご確認をお願いする背景）
-  総合評価：${a.grade}　／　指摘区分：${a.flags.join('、')}
+  総合評価：${a.grade}　／　指摘区分：${esc(a.flags.join('、'))}
   税務上の扱い：${a.tax_treat}（推奨科目：${a.judged}）
-  【税務・会計】${calc}（基準${yen(cfg.threshold)}円 → ${a.per>cfg.threshold?'超過':'以下'}）
-  【決裁プロセス】${proc}
-  【決裁者・合議者】事前: 最終[${r['事前最終決裁者']||'—'}]・合議[${r['事前合議者']||'—'}] ／ 精算: 最終[${r['精算最終決裁者']||'—'}]・合議[${r['精算合議者']||'—'}]
-  【相手方・隠蔽リスク】${fraud}
+  【税務・会計】${esc(calc)}（基準${yen(cfg.threshold)}円 → ${a.per>cfg.threshold?'超過':'以下'}）
+  【決裁プロセス】${esc(proc)}
+  【決裁者・合議者】事前: 最終[${esc(r['事前最終決裁者']||'—')}]・合議[${esc(r['事前合議者']||'—')}] ／ 精算: 最終[${esc(r['精算最終決裁者']||'—')}]・合議[${esc(r['精算合議者']||'—')}]
+  【相手方・隠蔽リスク】${esc(fraud)}
 
 ■ 3. ご確認・ご回答いただきたい事項（被監査部門ご記入）
-${q.map((x,i)=>`  Q${i+1}. ${x}${ANS}`).join('\n\n')}
+${q.map((x,i)=>`  Q${i+1}. ${esc(x)}${ANS}`).join('\n\n')}
 
 ■ 4. ご提示をお願いする証跡（該当に☑）
   □ 領収書／適格請求書（インボイス）　□ 参加者名簿（氏名・所属・役職）
