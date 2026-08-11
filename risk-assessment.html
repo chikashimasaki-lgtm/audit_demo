@@ -409,7 +409,7 @@ function render(){
       <span>（1=低 → 5=高）</span>
       ${erm&&erm.risks&&erm.risks.length?`<span style="margin-left:8px"><span style="outline:2px solid #6f42c1;outline-offset:-2px;padding:1px 7px;border-radius:3px">□</span> = ERM連関ファクター</span>`:''}
     </div>
-    <div class="legend">列番号とファクター名：${SHORT.map((s,i)=>`${i+1}=${s}`).join(' / ')}</div></div>`;
+    <div class="legend">列番号とファクター名：${SHORT.map((s,i)=>`${i+1}=${esc(s)}`).join(' / ')}</div></div>`;
 
   // ランキング
   h+=`<div class="card"><h2>🏆 監査対象 優先順位ランキング</h2>
