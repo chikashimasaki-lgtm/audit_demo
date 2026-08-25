@@ -264,7 +264,7 @@ function resetDef(){
 function loadSample(){
   document.getElementById('input').value=SAMPLE.map(r=>r.join(',')).join('\n');
 }
-function esc(s){return String(s).replace(/[&<>]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]));}
+function esc(s){return String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
 
 function run(){
   const errEl=document.getElementById('err'); errEl.textContent='';
