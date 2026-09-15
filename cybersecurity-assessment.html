@@ -293,7 +293,7 @@ function parseInput(){
 function runAudit(){ if(!CTX){ if(!applyDef()) return; } const rows=parseInput();
   const out=document.getElementById('out'); if(!rows.length){ out.innerHTML='<div class="card">データがありません。</div>'; return; }
   RESULTS=runRows(CTX,rows); applyHierarchy(); render(); }
-function esc(s){return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
+function esc(s){return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');}
 
 function render(){
   const org=document.getElementById('cfgOrg').value||'';
