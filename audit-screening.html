@@ -559,11 +559,12 @@ function loadCsv(ev){
   rd.readAsText(f,'UTF-8'); ev.target.value='';
 }
 function dl(blob,name){const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=name;a.click();}
+function csvCell_(v){ let s=String(v==null?'':v); if(/^[=+\-@\t\r]/.test(s)) s="'"+s; return `"${s.replace(/"/g,'""')}"`; }
 function downloadCsv(){
   if(!RESULTS.length){ alert('先に監査を実行してください'); return; }
   const head=[...CTX.cols,'総合評価','検知フラグ'];
   const rows=RESULTS.map(a=>[...CTX.cols.map(c=>a.row[c]),a.grade,a.flags.join('；')]);
-  const csv='﻿'+[head,...rows].map(r=>r.map(c=>`"${String(c==null?'':c).replace(/"/g,'""')}"`).join(',')).join('\r\n');
+  const csv='﻿'+[head,...rows].map(r=>r.map(csvCell_).join(',')).join('\r\n');
   dl(new Blob([csv],{type:'text/csv'}),'screening_results.csv');
 }
 function downloadConfCsv(){
@@ -571,7 +572,7 @@ function downloadConfCsv(){
   const head=['確認書発行日','監査テーマ','対象ID','監査対象組織','総合評価','指摘区分','案件内容','質問No','質問内容','ご回答','回答期限','ご回答者','提示証跡'];
   const ev='□証憑 □承認記録 □関連資料'; const rows=[];
   CONFIRMATIONS.forEach(c=>c.questions.forEach((q,i)=>rows.push([c.date,c.theme,c.id,c.org,c.grade,c.flags,c.detail,'Q'+(i+1),q,'','','',i===0?ev:''])));
-  const csv='﻿'+[head,...rows].map(r=>r.map(x=>`"${String(x==null?'':x).replace(/"/g,'""')}"`).join(',')).join('\r\n');
+  const csv='﻿'+[head,...rows].map(r=>r.map(csvCell_).join(',')).join('\r\n');
   dl(new Blob([csv],{type:'text/csv'}),'監査内容確認書.csv');
 }
 function downloadConfExcel(){
